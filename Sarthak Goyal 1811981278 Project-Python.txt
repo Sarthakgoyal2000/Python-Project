@@ -1,0 +1,330 @@
+import pandas as pd  
+import numpy as np
+import matplotlib.pyplot as plt 
+import seaborn as sns
+
+from warnings import filterwarnings
+filterwarnings('ignore')
+
+# display all columns of the dataframe
+pd.options.display.max_columns = None
+
+# display all rows of the dataframe
+pd.options.display.max_rows = None
+ 
+# to display the float values upto 6 decimal places     
+pd.options.display.float_format = '{:.6f}'.format
+
+# import train-test split 
+from sklearn.model_selection import train_test_split
+
+# import various functions from statsmodel to perform linear regression
+import statsmodels
+import statsmodels.api as sm
+import statsmodels.stats.api as sms
+from statsmodels.tools.eval_measures import rmse
+from statsmodels.compat import lzip
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import statsmodels.tsa.api as smt
+from statsmodels.graphics.gofplots import qqplot
+from statsmodels.stats.anova import anova_lm
+from statsmodels.formula.api import ols
+
+# import various functions from scipy
+from scipy import stats
+from scipy.stats import shapiro
+from scipy.stats import jarque_bera
+from scipy.stats import f_oneway
+
+# 'metrics' from sklearn is used for evaluating the model performance
+from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_squared_error
+
+
+
+youtube_views = pd.read_csv("train.csv")
+
+#display first five observations using head()
+youtube_views.head()
+
+**********************************************************
+
+youtube_views.drop(['Video_id', 'channel_title', 'title', 'tags','description' , 'Unnamed: 17','Unnamed: 18'], axis = 1, inplace = True)
+
+#displaying first 10 observation
+youtube_views.head(10)
+
+
+**********************************************************
+youtube_views.shape
+
+***********************************************************
+
+youtube_views.info()
+
+***********************************************************
+df_numeric_features = youtube_views.select_dtypes(include=[np.number])
+
+# display the first five observations
+df_numeric_features.head()
+
+***********************************************************
+
+df_categorical_features = youtube_views.select_dtypes(include=[np.object])
+
+# display categorical features
+df_categorical_features.head()
+
+***********************************************************
+def imputeTrainNull(data):    
+    data.Trend_day_count = pd.to_numeric(data.Trend_day_count, errors='coerce')
+    data.Tag_count = pd.to_numeric(data.Tag_count, errors='coerce')
+    data.likes = pd.to_numeric(data.likes, errors='coerce')
+    data.dislike = pd.to_numeric(data.dislike, errors='coerce')
+    data.views = pd.to_numeric(data.views, errors='coerce')
+    data.comment_count = pd.to_numeric(data.comment_count, errors='coerce')
+    data.Trend_tag_count = pd.to_numeric(data.Trend_tag_count, errors='coerce')
+    print(data.isnull().sum())
+
+#passing the youtube_views to respective function    
+#calling function    
+imputeTrainNull(youtube_views)
+
+***********************************************************
+df_numeric_features =  youtube_views.select_dtypes(include=[np.number])
+
+df_numeric_features.head()
+#df_categorical_features
+
+***********************************************************
+df_categorical_features = youtube_views.select_dtypes(include=[np.object])
+
+# display categorical features
+df_categorical_features.head()
+
+***********************************************************
+plt.figure(figsize = (12,7))
+
+# plot a boxplot to visualize the outliers
+df_numeric_features.boxplot()
+
+#set the title
+plt.title('Boxplot of numeric variables', fontsize = 13)
+
+# xticks(ticks) gives the x-axis tick values
+plt.xticks(rotation = 'vertical', fontsize = 13)
+
+# display the plot
+plt.show()
+
+***********************************************************
+
+def imputepreceding_values(data):
+    
+    data.comment_disabled.fillna(method ='ffill', inplace=True)
+    data['like_dislike_disabled'].fillna(method ='ffill', inplace=True)
+    data.category_id.fillna(method ='ffill', inplace=True)
+    data['tag appered in title'].fillna(method ='ffill', inplace=True)
+    print(data.isnull().sum())
+    
+#calling a function
+#passing the dataset (youtube_views)
+imputepreceding_values(youtube_views)
+
+***********************************************************
+def impute_median_values(data):
+    data.Trend_day_count.fillna(data.Trend_day_count.median(), inplace=True)
+    data.Tag_count.fillna(data.Tag_count.median(), inplace=True)
+    data.Trend_tag_count.fillna(data.Trend_tag_count.median(), inplace=True)
+    data.comment_count.fillna(data.comment_count.median(), inplace=True)
+    data.likes.fillna(data.likes.median(), inplace=True)
+    data.dislike.fillna(data.dislike.median(), inplace=True)
+    data.views.fillna(data.views.median(), inplace=True)
+    data.subscriber.fillna(data.subscriber.median(), inplace=True) 
+    print(data.isnull().sum())
+
+#calling a 'function
+impute_median_values(youtube_views)
+
+***********************************************************
+def handleOutliers(data):
+     #include all numeric data
+    df_num = data.select_dtypes(include=['int64','float64' ])
+    
+    # #calculating z-score by passing all numeric varibale
+    z = np.abs(stats.zscore(df_num))
+    
+    #threshold = 3
+    x= np.where(z > 3)
+    
+    #droping the variables 
+    data.drop(data.index[x[:1]], inplace=True)
+    
+    #printing the skewness of each variable
+    print(df_num.skew())
+    
+
+#calling the function
+handleOutliers(youtube_views)
+
+***********************************************************
+youtube_views = youtube_views.reset_index(drop = True)
+
+youtube_views.views = ((youtube_views.views) ** (1/3))
+youtube_views.subscriber = ((youtube_views.subscriber) ** (1/3))
+
+youtube_views.skew()
+
+
+***********************************************************
+Total = youtube_views.isnull().sum().sort_values(ascending=False) 
+Total
+
+***********************************************************
+Percentage = (youtube_views.isnull().sum()*100/youtube_views.isnull().count()).sort_values(ascending=False)   
+
+#concat the 'Total' and 'Percentage' columns using concat()
+missing_data = pd.concat([Total, Percentage], axis=1, keys=['Total', 'Percentage of Missing Values'])    
+missing_data
+
+***********************************************************
+youtube_views['tag appered in title'] = youtube_views['tag appered in title'].astype('object')
+
+#convert 'category_id' into datatype object
+youtube_views['category_id'] = youtube_views['category_id'].astype('object')
+
+
+youtube_views['comment_disabled'] = youtube_views['comment_disabled'].astype('str')
+
+#convert 'like dislike disable' into datatype string
+youtube_views['like_dislike_disabled'] = youtube_views['like_dislike_disabled'].astype('str')
+
+youtube_views.comment_disabled = youtube_views.comment_disabled.str.lower()
+
+#Converting like dislike disabled into lowercase
+youtube_views['like_dislike_disabled'] = youtube_views['like_dislike_disabled'].str.lower() 
+
+
+df_numeric_features = youtube_views.select_dtypes(include=[np.number])
+
+# display the first five observations
+df_numeric_features.head()
+
+***********************************************************
+df_categorial_features = youtube_views.select_dtypes(include=[np.object])
+
+# display the first five observations
+df_categorial_features.head()
+
+***********************************************************
+plt.figure(figsize = (20,10))
+
+# plot the heat map
+# corr(): give the correlation matrix
+sns.heatmap(df_numeric_features.corr(), annot = True, annot_kws = {"size": 11})
+
+# rotation = 'horizontal' rotates the y-axis labels horizontally
+# set text size using 'fontsize'
+plt.yticks(rotation = 'horizontal', fontsize = 15)
+plt.xticks(fontsize = 15)
+
+# display the plot
+plt.show()
+
+***********************************************************
+plt.figure(figsize = (20,10))
+
+# plot the heat map
+# corr(): give the correlation matrix
+
+sns.heatmap(df_numeric_features.corr()[np.abs(youtube_views.corr()) > 0.6], annot = True, annot_kws = {"size": 11})
+
+# rotate the y-axis labels
+# set text size using 'fontsize'
+plt.yticks(rotation = 'horizontal', fontsize = 15)
+plt.xticks(fontsize = 15)
+
+# display the plot
+plt.show()
+
+***********************************************************
+youtube_views
+
+***********************************************************
+from pandas import DataFrame
+df=pd.DataFrame(youtube_views,columns=['likes','dislike','views'])
+
+df['views'].max()
+
+***********************************************************
+df['views'].min()
+
+***********************************************************
+df.loc[(df.views<=160),'views']=1
+df.loc[(df.views>160),'views']=0
+
+***********************************************************
+df
+
+***********************************************************
+from sklearn.model_selection import train_test_split
+
+X=df[['dislike','likes']].astype(float)  # Features
+y=df['views'].astype(float)  # Labels
+
+# Split dataset into training set and test set
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3) # 70% training and 30% test
+
+#Import Random Forest Model
+from sklearn.ensemble import RandomForestClassifier
+
+#Create a Gaussian Classifier
+clf=RandomForestClassifier(n_estimators=150)
+
+#Train the model using the training sets y_pred=clf.predict(X_test)
+clf.fit(X_train,y_train)
+
+y_pred=clf.predict(X_test)
+#############################################
+
+#Import scikit-learn metrics module for accuracy calculation
+from sklearn import metrics
+# Model Accuracy, how often is the classifier correct?
+print("Accuracy:",metrics.accuracy_score(y_test, y_pred))
+
+***********************************************************
+import pandas as pd
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import train_test_split
+from sklearn import metrics 
+import io
+
+
+import pandas as pd
+from sklearn.tree import DecisionTreeClassifier # Import Decision Tree Classifier
+from sklearn.model_selection import train_test_split # Import train_test_split function
+from sklearn import metrics #Import scikit-learn metrics module for accuracy calculation
+import io
+#split dataset in features and target variable
+feature_cols = ['likes','dislike']
+X = df[feature_cols] # Features
+y = df.views # Target variable
+
+# Split dataset into training set and test set
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1) # 70% training and 30% test
+
+# Create Decision Tree classifer object
+clf = DecisionTreeClassifier()
+
+# Train Decision Tree Classifer
+clf = clf.fit(X_train,y_train)
+
+#Predict the response for test dataset
+y_pred = clf.predict(X_test)
+
+
+# Model Accuracy, how often is the classifier correct?
+print("Accuracy:",metrics.accuracy_score(y_test, y_pred))
+
+
+
